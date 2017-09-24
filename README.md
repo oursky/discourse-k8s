@@ -21,10 +21,10 @@ We will "mis-use" the launcher provided by discourse_docker to create the docker
 1. Create `containers/web_only.yml` as shown below
     1. The env var is not relevant to k8s, just for building the local image, fill in something works for your local environment
     1. Determine the plugins you want to install with your discourse setting here
-1. Tips: in case you download redis, it might be in protected mode and doesn't allow docker guest to host connection, start it with `redis-server —protected-mode no`
+1. Tips: in case you download redis, it might be in protected mode and doesn't allow docker guest to host connection, start it with `redis-server --protected-mode no`
 1. Create the docker images and upload the images to your k8s docker registry. Let's say we are using Google Cloud Registry:
     1. Create docker image by discourse's launcher: `./launcher bootstrap web_only`
-    1. Verify created: docker images
+    1. Verify created: `docker images`
     1. Upload image to registry with the commands below.
 
 ```

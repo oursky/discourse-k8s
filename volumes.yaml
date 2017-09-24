@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: oursky-discourse-pgsql-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  gcePersistentDisk:
+    fsType: "ext4"
+    pdName: "oursky-discourse-pgsql"
+  claimRef:
+    name: pgsql-pv-claim
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: oursky-discourse-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  gcePersistentDisk:
+    fsType: "ext4"
+    pdName: "oursky-discourse"
+  claimRef:
+    name: discourse-pv-claim

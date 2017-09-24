@@ -1,0 +1,15 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: discourse-ingress
+spec:
+  rules:
+  - host: change.me.com
+    http:
+      paths:
+      - backend:
+          serviceName: web-server
+          servicePort: 80
+  tls:
+  - hosts:
+    - change.me.com

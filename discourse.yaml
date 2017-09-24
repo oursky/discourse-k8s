@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-server
+  labels:
+    app: web-server
+spec:
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: web-server
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: discourse-pv-claim
+  labels:
+    app: web-server
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+        storage: 5Gi
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: web-server
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: web-server
+    spec:
+      containers:
+      - name: web-server
+        image: gcr.io/**change-me**/discourse:latest
+        command: ["/sbin/boot"]
+        ports:
+        - containerPort: 80
+        env:
+        - name: DISCOURSE_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: secret
+              key: dbUsername
+        - name: DISCOURSE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: secret
+              key: dbPassword
+        - name: DISCOURSE_DB_HOST
+          value: pgsql
+        - name: DISCOURSE_DB_NAME
+          value: discourse
+        - name: DISCOURSE_REDIS_HOST
+          value: redis
+        - name: DISCOURSE_DEVELOPER_EMAILS
+          value: bencheng@oursky.com
+        - name: DISCOURSE_HOSTNAME
+          value: change.me.com
+        - name: DISCOURSE_SMTP_ADDRESS
+          value: smtp.sendgrid.net
+        - name: DISCOURSE_SMTP_PORT
+          value: "2525"
+        - name: DISCOURSE_SMTP_USER_NAME
+          valueFrom:
+            secretKeyRef:
+              name: secret
+              key: smtpUsername
+        - name: DISCOURSE_SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: secret
+              key: smtpPassword
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 1
+            memory: 2Gi
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: discourse-storage
+          mountPath: /shared
+      volumes:
+      - name: discourse-storage
+        persistentVolumeClaim:
+          claimName: discourse-pv-claim

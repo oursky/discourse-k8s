@@ -83,34 +83,16 @@ gcloud compute disks create --size=**10GB** --type=**pd-ssd** --zone=**us-east1-
 gcloud compute disks create --size=**10GB** --type=**pd-ssd** --zone=**us-east1-b** **discourse-pgsql**
 ```
 
-### Prepare the secrets
-
-Create a secret.yaml as below
-
-```
-[workspace] cat secret.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: secret
-type: Opaque
-data:
-  dbUsername: [base64 encoded]
-  dbPassword: [base64 encoded]
-  smtpUsername: [base64 encoded]
-  smtpPassword: [base64 encoded]
-
-[workspace] kubectl apply -f secret.yaml
-```
-
 ### Deploy to k8s
 
 Customize the sample k8s file as follows, and the variables you probably want to tweak:
 
 * volumes.yaml
     * For both PersistentVolume:
+        * metadata.name
         * spec.capacity.storage
         * spec.gcePersistentDisk.pdName
+        * spec.claimRef.namespace
     * The sample file here assume using gcePersistentDisk. This file need to change heavily depends on what type of persistent disk you plan to use
 * redis.yaml
     * Deployment (redis)
@@ -133,10 +115,32 @@ Customize the sample k8s file as follows, and the variables you probably want to
     * spec.rules.host
     * spec.tls.hosts
 
-(Optional) Set the k8s context first to avoid --namespace in all commands below
+(Recommended) From there, you might want to create your own namespace for the deployment
+and assume you have set the right context to run the kubectl command in the
+namespace. Read [kubernetes doc](https://kubernetes.io/docs/tasks/administer-cluster/namespaces-walkthrough/) if you need.
+
+Otherwise, you should rename most name in the config files above to a more
+unique one and add some labels.
+
+Apply secrets. dbUsername and dbPassword can be anything you want. Please set
+the right smtpUsername and smtpPassword for the mail delivery services you use.
+
+Another notes on HTTPS for ingress is, you should read [here](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls) and the Ingress controllers specific to your cluster and update ingress.yaml accordingly
 
 ```
-kubectl config set-context $(kubectl config current-context) --namespace=**discourse-namespace**
+[workspace] cat secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret
+type: Opaque
+data:
+  dbUsername: [base64 encoded]
+  dbPassword: [base64 encoded]
+  smtpUsername: [base64 encoded]
+  smtpPassword: [base64 encoded]
+
+[workspace] kubectl apply -f secret.yaml
 ```
 
 Apply all config files
@@ -144,17 +148,16 @@ Apply all config files
 ```
 kubectl apply -f volumes.yaml
 kubectl apply -f redis.yaml
-kubectl apply -f pgsql
+kubectl apply -f pgsql.yaml
 ```
 
-Before starting the app, run the following on pgsql instance to init the database properly (TODO, create a pgsql image for that). You can find your pod by running `kubectl get pods`
+Before starting the app, run the following on pgsql instance to init the database properly (TODO, create a pgsql image for that). You can find your pod name by running `kubectl get pods`
 
 ```
-kubectl exec **pgsql-2981420674-hxx6h** -- su postgres -c '/opt/bitnami/postgresql/bin/psql template1 -c "create extension if not exists hstore;"'
-kubectl exec **pgsql-2981420674-hxx6h** -- su postgres -c '/opt/bitnami/postgresql/bin/psql template1 -c "create extension if not exists pg_trgm;"'
-kubectl exec **pgsql-2981420674-hxx6h** -- su postgres -c '/opt/bitnami/postgresql/bin/psql discourse -c "create extension if not exists hstore;"'
-kubectl exec **pgsql-2981420674-hxx6h** -- su postgres -c '/opt/bitnami/postgresql/bin/psql **discourse** -c "create extension if not exists pg_trgm;"'
-kubectl exec **pgsql-2981420674-hxx6h** -- su postgres -c "/opt/bitnami/postgresql/bin/psql **discourse** -c \"update pg_database set encoding = pg_char_to_encoding('UTF8') where datname = '**discourse**' AND encoding = pg_char_to_encoding('SQL_ASCII');\""
+kubectl exec **pgsql** -- su postgres -c '/opt/bitnami/postgresql/bin/psql template1 -c "create extension if not exists hstore;"'
+kubectl exec **pgsql** -- su postgres -c '/opt/bitnami/postgresql/bin/psql template1 -c "create extension if not exists pg_trgm;"'
+kubectl exec **pgsql** -- su postgres -c '/opt/bitnami/postgresql/bin/psql **discourse** -c "create extension if not exists hstore;"'
+kubectl exec **pgsql** -- su postgres -c '/opt/bitnami/postgresql/bin/psql **discourse** -c "create extension if not exists pg_trgm;"'
 ```
 
 Create discourse deployment and ingress
@@ -168,14 +171,17 @@ From there, your discourse instance should be up and running, some useful comman
 
 ```
 # Check logs of k8s pod
-kubectl logs —since=1h —tail=50 -lapp=web-server
+kubectl logs --since=1h --tail=50 -lapp=web-server
 
-# Open an interactive terminal into the web-server:
-kubectl exec -it **web-server** — /bin/bash
+# Open an interactive terminal into the web-server / pgsql server:
+kubectl exec -it **web-server** -- /bin/bash
+kubectl exec -it **pg-sql** -- /bin/bash
 
 # You might want to do the following:
+# * Delete / create the pgsql database
 # * Check logs under /shared/log/rails
-# * Run bundle exec rake db:migrate / admin:create in case something went wrong.
+# * Start stop unicorn by sv stop unicorn
+# * Run bundle exec rake db:migrate / admin:create in case something went wrong under /var/www/discourse
 # * You can also check the logs with an admin account at /admin/logs of your deployment
 ```
 

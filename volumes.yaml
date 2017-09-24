@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: oursky-discourse-pgsql-pv
+  name: changeme-discourse-pgsql-pv
 spec:
   capacity:
     storage: 10Gi
@@ -11,12 +11,13 @@ spec:
     fsType: "ext4"
     pdName: "oursky-discourse-pgsql"
   claimRef:
+    namespace: changeme
     name: pgsql-pv-claim
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: oursky-discourse-pv
+  name: changeme-discourse-pv
 spec:
   capacity:
     storage: 10Gi
@@ -26,4 +27,5 @@ spec:
     fsType: "ext4"
     pdName: "oursky-discourse"
   claimRef:
+    namespace: changeme
     name: discourse-pv-claim

@@ -39,24 +39,26 @@ spec:
     spec:
       containers:
         - name: pgsql-server
-          image: bitnami/postgresql:latest
+          image: postgres:9.5.8
           ports:
           - containerPort: 5432
           volumeMounts:
             - name: pgsql-storage
-              mountPath: /bitnami
+              mountPath: /var/lib/postgresql/data
           env:
-            - name: POSTGRESQL_USERNAME
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: secret
                   key: dbUsername
-            - name: POSTGRESQL_PASSWORD
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: secret
                   key: dbPassword
-            - name: POSTGRESQL_DATABASE
+            - name: POSTGRES_DB
               value: discourse
       volumes:
       - name: pgsql-storage

@@ -230,3 +230,33 @@ AWS inline policy for S3 bucket access
 * Run multiple replicas for Discourse web-server for scale up. It should works actually but just haven't tried.
 * Deploy Master-Slave PostgreSQL for scale up. We're using bitnami's postgreSQL docker image and the relevant instructions are here: https://github.com/bitnami/bitnami-docker-postgresql
 
+## How to upgrade?
+
+The upgrade process involve:
+1. Use launcher to rebuild docker image
+2. Tag the docker image to a new version and upload it
+3. Update k8s config and apply
+4. rake db:migrate
+
+Use launcher to rebuild docker image and upload
+```
+./launcher rebuild web_only
+docker images # check image
+docker tag local_discourse/web_only gcr.io/**my-cluster**/discourse:**version**
+gcloud docker -- push gcr.io/**my-cluster**/discourse:**version**
+```
+
+Update the k8s config and apply
+```
+# change the config file's image path to new version
+kubectl apply -f discourse.yaml
+```
+
+Run db:migrate
+```
+kubectl get pod # find the id
+kubectl exec -it web-server-xxxxxxx-xxxx -- /bin/bash
+
+cd /var/www/discourse
+rake db:migrate
+```
